@@ -79,6 +79,7 @@ const Auth = {
         login_em: new Date().toISOString()
       };
       sessionStorage.setItem(this.CHAVE_SESSAO, JSON.stringify(sessao));
+      this.registrarOnline();
       return { sucesso: true, usuario: sessao };
     }
 
@@ -93,9 +94,61 @@ const Auth = {
   },
 
   logout() {
+    this.removerOnline();
     sessionStorage.removeItem(this.CHAVE_SESSAO);
     window.location.href = 'index.html';
   },
+
+  // ========== PRESENÇA (ONLINE) ==========
+  CHAVE_ONLINE: 'usuarios_online',
+
+  registrarOnline() {
+    const sessao = this.obterSessao();
+    if (!sessao) return;
+    let online = JSON.parse(localStorage.getItem(this.CHAVE_ONLINE) || '{}');
+    online[sessao.id] = { nome: sessao.nome, perfil: sessao.perfil, timestamp: Date.now() };
+    localStorage.setItem(this.CHAVE_ONLINE, JSON.stringify(online));
+
+    // Heartbeat a cada 30s
+    if (this._heartbeatInterval) clearInterval(this._heartbeatInterval);
+    this._heartbeatInterval = setInterval(() => {
+      let o = JSON.parse(localStorage.getItem(this.CHAVE_ONLINE) || '{}');
+      if (sessao.id) {
+        o[sessao.id] = { nome: sessao.nome, perfil: sessao.perfil, timestamp: Date.now() };
+        localStorage.setItem(this.CHAVE_ONLINE, JSON.stringify(o));
+      }
+    }, 30000);
+
+    // Limpar ao fechar aba
+    window.addEventListener('beforeunload', () => this.removerOnline());
+  },
+
+  removerOnline() {
+    const sessao = this.obterSessao();
+    if (!sessao) return;
+    let online = JSON.parse(localStorage.getItem(this.CHAVE_ONLINE) || '{}');
+    delete online[sessao.id];
+    localStorage.setItem(this.CHAVE_ONLINE, JSON.stringify(online));
+    if (this._heartbeatInterval) clearInterval(this._heartbeatInterval);
+  },
+
+  obterOnline() {
+    const online = JSON.parse(localStorage.getItem(this.CHAVE_ONLINE) || '{}');
+    const agora = Date.now();
+    const LIMITE_MS = 60000; // 60s sem heartbeat = offline
+    const resultado = {};
+    for (const [id, dados] of Object.entries(online)) {
+      if (agora - dados.timestamp < LIMITE_MS) {
+        resultado[id] = dados;
+      }
+    }
+    return resultado;
+  },
+
+  estaOnline(usuarioId) {
+    const online = this.obterOnline();
+    return !!online[usuarioId];
+  }
 
   obterSessao() {
     const dados = sessionStorage.getItem(this.CHAVE_SESSAO);
@@ -293,6 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     Auth.iniciarRelogio();
+    Auth.registrarOnline();
   }
 
   // Marcar que auth.js está pronto

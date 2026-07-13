@@ -102,6 +102,7 @@
     async function renderizarTabela() {
       const usuarios = await Auth.obterUsuarios();
       const sessao = Auth.obterSessao();
+      const online = Auth.obterOnline();
       const tbody = document.getElementById('tabelaUsuarios');
 
       const perfilLabels = {
@@ -120,7 +121,10 @@
                 ${Utils.obterIniciais(u.nome)}
               </div>
               <div>
-                <div style="font-weight:600; font-size:14px;">${Utils.escapeHtml(u.nome)}</div>
+                <div style="font-weight:600; font-size:14px;">
+                  ${Utils.escapeHtml(u.nome)}
+                  ${online[u.id] ? '<span class="online-dot" title="Online"></span>' : ''}
+                </div>
                 ${u.id === sessao.id ? '<span style="font-size:11px; color:var(--accent);">(Você)</span>' : ''}
               </div>
             </div>
@@ -180,6 +184,9 @@
       }
 
       renderizarTabela();
+
+      // Atualizar status online a cada 30s
+      setInterval(renderizarTabela, 30000);
 
       document.getElementById('formUsuario').addEventListener('submit', async (e) => {
         e.preventDefault();
