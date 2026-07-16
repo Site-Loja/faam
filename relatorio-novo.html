@@ -16,14 +16,14 @@
         <form id="formRelatorio" onsubmit="return false;">
           <div class="form-card mb-3">
             <h3><i class="fas fa-file-medical"></i> Dados do Relatório</h3>
-            <div class="info-grid">
-              <div class="mb-1">
+            <div class="info-grid" style="gap: 20px;">
+              <div style="margin-bottom: 16px;">
                 <label class="form-label">Paciente *</label>
                 <select class="form-select" id="paciente_id" required>
                   <option value="">Selecione o paciente</option>
                 </select>
               </div>
-              <div class="mb-1">
+              <div style="margin-bottom: 16px;">
                 <label class="form-label">Tipo de Relatório *</label>
                 <select class="form-select" id="tipo" required>
                   <option value="">Selecione o tipo</option>
@@ -35,11 +35,11 @@
                   <option value="obito">Relatório de Óbito</option>
                 </select>
               </div>
-              <div class="mb-1">
+              <div style="margin-bottom: 16px;">
                 <label class="form-label">Data *</label>
                 <input type="date" class="form-control" id="data" required>
               </div>
-              <div class="mb-1">
+              <div style="margin-bottom: 16px;">
                 <label class="form-label">Profissional Responsável *</label>
                 <input type="text" class="form-control" id="profissional" required placeholder="Ex: Dr. Carlos Mendes">
               </div>
