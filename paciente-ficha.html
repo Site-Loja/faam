@@ -60,7 +60,7 @@
       const relatorios = await DB.obterRelatoriosPorPaciente(id);
       const sessao = Auth.obterSessao();
       const podeEditar = Auth.podeAcessar('paciente_editar');
-      const podeExcluir = sessao && sessao.perfil === 'admin';
+      const podeExcluir = sessao && (sessao.perfil === 'admin' || sessao.perfil === 'admin_master');
 
       const relatoriosHtml = relatorios.length > 0
         ? relatorios.slice(0, 5).map(r => `
