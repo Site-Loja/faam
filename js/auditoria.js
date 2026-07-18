@@ -30,6 +30,22 @@ const Auditoria = {
     }
   },
 
+  async limpar() {
+    if (DB.modoSupabase) {
+      try {
+        const { error } = await clientSupabase.from('auditoria').delete().neq('id', '');
+        if (error) throw error;
+        return true;
+      } catch (e) {
+        console.error('Erro ao limpar auditoria:', e);
+        return false;
+      }
+    } else {
+      localStorage.removeItem('auditoria_faam');
+      return true;
+    }
+  },
+
   async obterRegistros(filtro = {}) {
     if (DB.modoSupabase) {
       try {

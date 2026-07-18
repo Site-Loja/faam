@@ -24,6 +24,9 @@
                 <option value="pacientes">Pacientes</option>
                 <option value="relatorios">Relatórios</option>
               </select>
+              <button class="btn btn-danger" id="btnLimparAuditoria" style="padding:8px 14px; font-size:13px; display:none; background:var(--danger); color:#fff; border:none; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                <i class="fas fa-trash-alt"></i> Limpar Auditoria
+              </button>
             </div>
           </div>
         </div>
@@ -131,6 +134,25 @@
       await carregarAuditoria();
 
       document.getElementById('filtroModulo').addEventListener('change', carregarAuditoria);
+
+      // Mostrar botão limpar apenas para admin_master
+      const sessao = Auth.obterSessao();
+      if (sessao && sessao.perfil === 'admin_master') {
+        const btnLimpar = document.getElementById('btnLimparAuditoria');
+        btnLimpar.style.display = 'inline-flex';
+        btnLimpar.style.alignItems = 'center';
+        btnLimpar.style.gap = '6px';
+        btnLimpar.addEventListener('click', async () => {
+          if (!confirm('Tem certeza que deseja limpar TODOS os registros de auditoria? Esta ação não pode ser desfeita.')) return;
+          const ok = await Auditoria.limpar();
+          if (ok) {
+            Auditoria.registrar('Auditoria limpa', 'sistema', 'Todos os registros foram removidos');
+            await carregarAuditoria();
+          } else {
+            alert('Erro ao limpar auditoria. Tente novamente.');
+          }
+        });
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => { aguardarPronto(); });
