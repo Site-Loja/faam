@@ -27,6 +27,7 @@
   <script src="js/dados-iniciais.js"></script>
   <script src="js/db.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/r2-upload.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       function aguardarPronto() {
@@ -226,6 +227,15 @@
           </div>
         </div>
 
+        <!-- Documentos / Anexos (somente visualização) -->
+        <div class="info-section">
+          <div class="section-title"><i class="fas fa-paperclip"></i> Documentos / Anexos</div>
+          <div class="section-body">
+            <div id="listaAnexos"><p style="color:var(--text-light); font-size:13px;">Carregando...</p></div>
+            <p style="font-size:11px; color:var(--text-light); margin-top:8px;">Para adicionar ou remover anexos, clique em <a href="paciente-editar.html?id=${paciente.id}" style="color:var(--accent);">Editar Paciente</a>.</p>
+          </div>
+        </div>
+
         <!-- Botões -->
         <div class="no-print" style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px;">
           <a href="pacientes.html" class="btn btn-outline">
@@ -236,6 +246,39 @@
       }
 
       aguardarPronto();
+
+      // === ANEXOS (somente visualização) ===
+      async function carregarAnexosFicha() {
+        const id = Utils.obterParametroUrl('id');
+        if (!id) return;
+        const container = document.getElementById('listaAnexos');
+        try {
+          const resp = await fetch(`https://faam-upload.jhonjunn.workers.dev/list?paciente_id=${id}`);
+          const arquivos = await resp.json();
+          if (!arquivos.length) {
+            container.innerHTML = '<p style="color:var(--text-light); font-size:13px;">Nenhum documento anexado.</p>';
+            return;
+          }
+          const icones = { 'application/pdf': 'fa-file-pdf', 'image/jpeg': 'fa-file-image', 'image/png': 'fa-file-image', 'image/webp': 'fa-file-image' };
+          container.innerHTML = arquivos.map(a => `
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px;">
+              <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                <i class="fas ${icones[a.tipo] || 'fa-file'}" style="font-size:20px; color:var(--accent);"></i>
+                <div style="min-width:0;">
+                  <div style="font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${Utils.escapeHtml(a.nome)}</div>
+                  <div style="font-size:11px; color:var(--text-light);">${R2.formatarTamanho(a.tamanho)} &middot; ${a.criado_em ? new Date(a.criado_em).toLocaleDateString('pt-BR') : '-'}</div>
+                </div>
+              </div>
+              <a href="https://faam-upload.jhonjunn.workers.dev/file/${a.key}" target="_blank" class="btn btn-sm btn-outline" title="Abrir">
+                <i class="fas fa-external-link-alt"></i>
+              </a>
+            </div>
+          `).join('');
+        } catch (err) {
+          container.innerHTML = '<p style="color:var(--danger); font-size:13px;">Erro ao carregar documentos.</p>';
+        }
+      }
+      carregarAnexosFicha();
 
       // Função para excluir paciente (admin apenas)
       window.excluirPaciente = async function(id, nome) {
