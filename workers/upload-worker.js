@@ -31,6 +31,11 @@ export default {
       return handleDelete(request, env, corsHeaders);
     }
 
+    // Servir arquivo
+    if (url.pathname.startsWith('/file/') && request.method === 'GET') {
+      return handleFile(url.pathname.replace('/file/', ''), env, corsHeaders);
+    }
+
     return new Response('Not found', { status: 404, headers: corsHeaders });
   },
 };
@@ -116,4 +121,21 @@ async function handleDelete(request, env, corsHeaders) {
   return new Response(JSON.stringify({ success: true }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+async function handleFile(key, env, corsHeaders) {
+  try {
+    const object = await env.DOCUMENTOS.get(key);
+    if (!object) {
+      return new Response('Not found', { status: 404, headers: corsHeaders });
+    }
+
+    const headers = { ...corsHeaders };
+    headers['Content-Type'] = object.httpMetadata?.contentType || 'application/octet-stream';
+    headers['Cache-Control'] = 'public, max-age=86400';
+
+    return new Response(object.body, { headers });
+  } catch (err) {
+    return new Response('Error', { status: 500, headers: corsHeaders });
+  }
 }
