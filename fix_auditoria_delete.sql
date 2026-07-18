@@ -1,0 +1,1 @@
+CREATE POLICY "auditoria_delete" ON auditoria FOR DELETE USING (true);

@@ -30,6 +30,7 @@ ALTER TABLE auditoria ENABLE ROW LEVEL SECURITY;
 -- 4. Criar políticas
 CREATE POLICY "auditoria_select" ON auditoria FOR SELECT USING (true);
 CREATE POLICY "auditoria_insert" ON auditoria FOR INSERT WITH CHECK (true);
+CREATE POLICY "auditoria_delete" ON auditoria FOR DELETE USING (true);
 
 -- 5. Criar índices
 CREATE INDEX IF NOT EXISTS idx_auditoria_timestamp ON auditoria(timestamp);
