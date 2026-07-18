@@ -138,6 +138,16 @@
 
     async function excluirPacienteLista(id, nome) {
       if (!Utils.confirmar(`Deseja realmente excluir o paciente "${nome}"?\n\nEsta ação não pode ser desfeita.`)) return;
+      const senha = prompt('Digite sua senha de administrador para confirmar a exclusão:');
+      if (!senha) return;
+      const sessao = Auth.obterSessao();
+      const usuarios = await Auth.obterUsuarios();
+      const usuario = usuarios.find(u => u.email === sessao.email);
+      const hashDigitado = await Auth._hashCodigo(senha);
+      if (usuario && usuario.codigo_hash !== hashDigitado) {
+        Utils.mostrarToast('Senha incorreta! Exclusão cancelada.', 'error');
+        return;
+      }
       const resultado = await DB.excluirPaciente(id);
       if (resultado !== false) {
         Utils.mostrarToast('Paciente excluído com sucesso!');
