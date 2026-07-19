@@ -14,7 +14,6 @@ const DB = {
 
     if (this.modoSupabase) {
       console.log('✅ Conectado ao Supabase - dados sincronizados em nuvem');
-      await this._syncSeed();
     } else {
       console.log('📦 Modo offline - dados salvos no navegador');
       if (!localStorage.getItem(this.CHAVE_PACIENTES)) {

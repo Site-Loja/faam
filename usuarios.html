@@ -184,7 +184,12 @@
       }
 
       if (DB.modoSupabase) {
-        await clientSupabase.from('usuarios').delete().eq('id', id);
+        const { error } = await clientSupabase.from('usuarios').delete().eq('id', id);
+        if (error) {
+          console.error('Erro ao excluir usuário:', error);
+          Utils.mostrarToast('Erro ao excluir usuário. Tente novamente.', 'error');
+          return;
+        }
       } else {
         const novosUsuarios = usuarios.filter(u => u.id !== id);
         localStorage.setItem(Auth.CHAVE_USUARIOS, JSON.stringify(novosUsuarios));
