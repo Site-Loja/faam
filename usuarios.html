@@ -101,11 +101,18 @@
   <script src="js/db.js"></script>
   <script src="js/auth.js"></script>
   <script>
+    function escapeAttr(str) {
+      if (!str) return '';
+      return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
     async function renderizarTabela() {
       const usuarios = await Auth.obterUsuarios();
       const sessao = Auth.obterSessao();
       const online = Auth.obterOnline();
       const tbody = document.getElementById('tabelaUsuarios');
+
+      if (!sessao) return;
 
       const perfilLabels = {
         admin: '<span class="badge" style="background:#faf5ff;color:#6b46c1;">Administrador</span>',
@@ -147,11 +154,11 @@
           <td class="text-right no-print">
             ${u.id !== sessao.id && u.perfil !== 'admin_master' ? `
               ${ehAdminMaster ? `
-                <button class="btn btn-sm ${bloqueado ? 'btn-success' : 'btn-warning'}" onclick="${bloqueado ? `desbloquearUsuario('${u.id}')` : `bloquearUsuario('${u.id}', '${Utils.escapeHtml(u.nome)}')`}" title="${bloqueado ? 'Desbloquear' : 'Bloquear'}">
+                <button class="btn btn-sm ${bloqueado ? 'btn-success' : 'btn-warning'}" onclick="${bloqueado ? `desbloquearUsuario('${escapeAttr(u.id)}')` : `bloquearUsuario('${escapeAttr(u.id)}', '${escapeAttr(u.nome)}')`}" title="${bloqueado ? 'Desbloquear' : 'Bloquear'}">
                   <i class="fas ${bloqueado ? 'fa-unlock' : 'fa-lock'}"></i>
                 </button>
               ` : ''}
-              <button class="btn btn-sm btn-danger" onclick="excluirUsuario('${u.id}', '${Utils.escapeHtml(u.nome)}')" title="Excluir">
+              <button class="btn btn-sm btn-danger" onclick="excluirUsuario('${escapeAttr(u.id)}', '${escapeAttr(u.nome)}')" title="Excluir">
                 <i class="fas fa-trash"></i>
               </button>
             ` : '<span class="text-muted" style="font-size:12px;">-</span>'}
