@@ -1,37 +1,22 @@
 -- ========================================
--- AUDITORIA + BLOQUEAR USUÁRIO
+-- AUDITORIA - Políticas RLS
 -- ========================================
--- Cole todo este conteúdo no SQL Editor do Supabase
--- (Dashboard > SQL Editor > New Query > cole aqui > Run)
+-- Rode este SQL no Supabase Dashboard:
+-- SQL Editor > New Query > cole > Run
 -- ========================================
 
--- 1. Adicionar coluna status na tabela usuarios (se não existir)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'status') THEN
-    ALTER TABLE usuarios ADD COLUMN status TEXT DEFAULT 'ativo';
-  END IF;
-END $$;
-
--- 2. Criar tabela de auditoria
-CREATE TABLE IF NOT EXISTS auditoria (
-  id TEXT PRIMARY KEY,
-  usuario_id TEXT,
-  usuario_nome TEXT,
-  acao TEXT NOT NULL,
-  modulo TEXT NOT NULL,
-  detalhes TEXT,
-  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 3. Habilitar RLS
+-- Habilitar RLS (ignora erro se já estiver habilitado)
 ALTER TABLE auditoria ENABLE ROW LEVEL SECURITY;
 
--- 4. Criar políticas
+-- Remover políticas antigas (se existirem) e recriar
+DROP POLICY IF EXISTS "auditoria_select" ON auditoria;
+DROP POLICY IF EXISTS "auditoria_insert" ON auditoria;
+DROP POLICY IF EXISTS "auditoria_delete" ON auditoria;
+
 CREATE POLICY "auditoria_select" ON auditoria FOR SELECT USING (true);
 CREATE POLICY "auditoria_insert" ON auditoria FOR INSERT WITH CHECK (true);
 CREATE POLICY "auditoria_delete" ON auditoria FOR DELETE USING (true);
 
--- 5. Criar índices
+-- Criar índices (ignora erro se já existirem)
 CREATE INDEX IF NOT EXISTS idx_auditoria_timestamp ON auditoria(timestamp);
 CREATE INDEX IF NOT EXISTS idx_auditoria_usuario_id ON auditoria(usuario_id);

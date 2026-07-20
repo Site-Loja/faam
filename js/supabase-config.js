@@ -12,19 +12,35 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Inicializar cliente Supabase (usando nome diferente para evitar conflito)
 let clientSupabase = null;
 
-if (SUPABASE_URL !== 'COLE_AQUI_SEU_PROJECT_URL' && window.supabase) {
-  clientSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    }
-  });
+function inicializarSupabase() {
+  if (SUPABASE_URL === 'COLE_AQUI_SEU_PROJECT_URL') return false;
+  
+  // Tentar criar cliente Supabase
+  if (window.supabase && window.supabase.createClient) {
+    clientSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+    return true;
+  }
+  
+  // Se window.supabase ainda não existe, tentar novamente em 200ms
+  if (!clientSupabase) {
+    setTimeout(inicializarSupabase, 200);
+  }
+  return false;
 }
+
+// Tentar inicializar imediatamente
+inicializarSupabase();
 
 // Verificar se Supabase está configurado
 function verificarSupabase() {
-  if (!clientSupabase || SUPABASE_URL === 'COLE_AQUI_SEU_PROJECT_URL') {
+  if (SUPABASE_URL === 'COLE_AQUI_SEU_PROJECT_URL') {
     return false;
   }
-  return true;
+  // Se o cliente ainda não foi criado, tentar inicializar
+  if (!clientSupabase) {
+    inicializarSupabase();
+  }
+  return !!clientSupabase;
 }

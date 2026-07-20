@@ -52,9 +52,14 @@ const DB = {
   // ===== PACIENTES =====
   async obterPacientes() {
     if (this.modoSupabase) {
-      const { data, error } = await clientSupabase.from('pacientes').select('*');
-      if (error) { console.error(error); return []; }
-      return data || [];
+      try {
+        const { data, error } = await clientSupabase.from('pacientes').select('*');
+        if (error) { console.error(error); return []; }
+        return data || [];
+      } catch (e) {
+        console.error('Erro ao buscar pacientes via Supabase:', e);
+        return [];
+      }
     }
     const dados = localStorage.getItem(this.CHAVE_PACIENTES);
     return dados ? JSON.parse(dados) : [];
