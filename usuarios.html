@@ -16,9 +16,14 @@
         <div class="table-card mb-3">
           <div class="table-header">
             <h3><i class="fas fa-user-cog"></i> Usuários do Sistema</h3>
-            <button class="btn btn-success no-print" id="btnNovoUsuario" onclick="abrirModal()">
-              <i class="fas fa-user-plus"></i> Cadastrar Funcionário
-            </button>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-primary no-print" id="btnNovoAdmin" onclick="abrirModalAdmin()" style="display:none;">
+                <i class="fas fa-user-shield"></i> Cadastrar Admin
+              </button>
+              <button class="btn btn-success no-print" id="btnNovoUsuario" onclick="abrirModal()">
+                <i class="fas fa-user-plus"></i> Cadastrar Funcionário
+              </button>
+            </div>
           </div>
         </div>
 
@@ -89,6 +94,54 @@
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%" id="btnCadastrar">
           <i class="fas fa-save"></i> Salvar Funcionário
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Cadastro de Admin -->
+  <div id="modalAdmin" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div class="login-card" style="max-width:480px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h2 style="font-size:20px; color:#6b46c1"><i class="fas fa-user-shield"></i> Cadastrar Administrador</h2>
+        <button onclick="fecharModalAdmin()" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-light)">&times;</button>
+      </div>
+      <div style="background:#faf5ff; border:1px solid #e9d8fd; border-radius:8px; padding:12px; margin-bottom:16px; font-size:13px; color:#553c9a;">
+        <i class="fas fa-info-circle"></i> Apenas <strong>Admin Masters</strong> podem criar contas de administrador.
+      </div>
+      <div class="login-error" id="erroModalAdmin"></div>
+      <div id="sucessoModalAdmin" style="background:#f0fff4; color:#38a169; border-radius:8px; padding:16px; display:none; margin-bottom:16px;">
+        <div style="text-align:center;">
+          <i class="fas fa-check-circle" style="font-size:32px; color:#38a169; margin-bottom:8px;"></i>
+          <h3 style="margin-bottom:8px; color:#38a169;">Admin Cadastrado!</h3>
+          <p style="margin-bottom:4px;">E-mail: <strong id="emailAdminCadastrado"></strong></p>
+          <p style="margin-bottom:12px;">Código: <strong id="codigoAdminCadastrado" style="font-size:20px; letter-spacing:4px;"></strong></p>
+          <p style="font-size:12px; color:var(--text-light);">Anote o código e informe ao administrador.</p>
+        </div>
+      </div>
+      <form id="formAdmin" onsubmit="return false;">
+        <div class="mb-2">
+          <label class="form-label">Nome completo *</label>
+          <input type="text" class="form-control" id="cadAdminNome" placeholder="Nome do administrador" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">E-mail *</label>
+          <input type="email" class="form-control" id="cadAdminEmail" placeholder="admin@email.com" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Código de Acesso *</label>
+          <input type="password" class="form-control" id="cadAdminCodigo" placeholder="Mínimo 6 caracteres" required minlength="6" maxlength="20" style="text-align:center; font-size:18px; letter-spacing:4px; font-weight:700;">
+          <small style="color:var(--text-light); font-size:12px;">O administrador usará este código para fazer login</small>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Nível de Administrador *</label>
+          <select class="form-select" id="cadAdminPerfil" required>
+            <option value="admin">Administrador</option>
+          </select>
+          <small style="color:var(--text-light); font-size:12px;">Admin pode gerenciar pacientes, relatórios e usuários</small>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; background:#6b46c1; border-color:#6b46c1;" id="btnCadastrarAdmin">
+          <i class="fas fa-save"></i> Salvar Administrador
         </button>
       </form>
     </div>
@@ -180,6 +233,23 @@
       document.getElementById('modal').style.display = 'none';
     }
 
+    function abrirModalAdmin() {
+      const sessao = Auth.obterSessao();
+      if (!sessao || sessao.perfil !== 'admin_master') {
+        Utils.mostrarToast('Apenas Admin Masters podem criar administradores!', 'error');
+        return;
+      }
+      document.getElementById('modalAdmin').style.display = 'flex';
+      document.getElementById('formAdmin').reset();
+      document.getElementById('erroModalAdmin').style.display = 'none';
+      document.getElementById('sucessoModalAdmin').style.display = 'none';
+      document.getElementById('formAdmin').style.display = 'block';
+    }
+
+    function fecharModalAdmin() {
+      document.getElementById('modalAdmin').style.display = 'none';
+    }
+
     async function excluirUsuario(id, nome) {
       if (!Utils.confirmar(`Deseja realmente excluir o usuário "${nome}"?`)) return;
 
@@ -234,11 +304,18 @@
         return;
       }
 
+      // Mostrar botão de admin somente para admin_master
+      const sessao = Auth.obterSessao();
+      if (sessao && sessao.perfil === 'admin_master') {
+        document.getElementById('btnNovoAdmin').style.display = 'inline-flex';
+      }
+
       renderizarTabela();
 
       // Atualizar status online a cada 30s
       setInterval(renderizarTabela, 30000);
 
+      // Handler do formulário de funcionário
       document.getElementById('formUsuario').addEventListener('submit', async (e) => {
         e.preventDefault();
         const erroEl = document.getElementById('erroModal');
@@ -277,6 +354,58 @@
           sucessoEl.style.display = 'block';
           document.getElementById('emailCadastrado').textContent = email;
           document.getElementById('codigoCadastrado').textContent = codigo;
+          renderizarTabela();
+        } else {
+          erroEl.textContent = resultado.erro;
+          erroEl.style.display = 'block';
+        }
+      });
+
+      // Handler do formulário de admin
+      document.getElementById('formAdmin').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const sessao = Auth.obterSessao();
+        if (!sessao || sessao.perfil !== 'admin_master') {
+          Utils.mostrarToast('Apenas Admin Masters podem criar administradores!', 'error');
+          return;
+        }
+
+        const erroEl = document.getElementById('erroModalAdmin');
+        const sucessoEl = document.getElementById('sucessoModalAdmin');
+        erroEl.style.display = 'none';
+        sucessoEl.style.display = 'none';
+
+        const nome = document.getElementById('cadAdminNome').value.trim();
+        const email = document.getElementById('cadAdminEmail').value.trim();
+        const codigo = document.getElementById('cadAdminCodigo').value.trim();
+        const perfil = document.getElementById('cadAdminPerfil').value;
+
+        if (!nome || !email || !codigo) {
+          erroEl.textContent = 'Preencha todos os campos.';
+          erroEl.style.display = 'block';
+          return;
+        }
+
+        if (codigo.length < 6) {
+          erroEl.textContent = 'O código deve ter pelo menos 6 caracteres.';
+          erroEl.style.display = 'block';
+          return;
+        }
+
+        const usuarios = await Auth.obterUsuarios();
+        if (usuarios.find(u => u.codigo === codigo)) {
+          erroEl.textContent = 'Este código já está em uso. Escolha outro.';
+          erroEl.style.display = 'block';
+          return;
+        }
+
+        const resultado = await Auth.cadastrarUsuario({ nome, email, codigo, perfil }, true);
+
+        if (resultado.sucesso) {
+          document.getElementById('formAdmin').style.display = 'none';
+          sucessoEl.style.display = 'block';
+          document.getElementById('emailAdminCadastrado').textContent = email;
+          document.getElementById('codigoAdminCadastrado').textContent = codigo;
           renderizarTabela();
         } else {
           erroEl.textContent = resultado.erro;

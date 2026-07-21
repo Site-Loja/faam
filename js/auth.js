@@ -326,6 +326,14 @@ const Auth = {
   },
 
   async cadastrarUsuario(dados) {
+    // Verificar se quem está criando é admin_master (quando criando admin)
+    if (dados.perfil === 'admin' || dados.perfil === 'admin_master') {
+      const sessao = this.obterSessao();
+      if (!sessao || sessao.perfil !== 'admin_master') {
+        return { sucesso: false, erro: 'Apenas Admin Masters podem criar contas de administrador.' };
+      }
+    }
+
     const usuarios = await this.obterUsuarios();
 
     if (usuarios.find(u => u.email === dados.email)) {
