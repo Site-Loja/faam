@@ -8,14 +8,19 @@ const DB = {
   modoSupabase: false,
 
   _sincronizando: false,
+  _initPromise: null,
 
   async init() {
+    this._initPromise = this._doInit();
+    await this._initPromise;
+  },
+
+  async _doInit() {
     // Aguardar Supabase estar pronto (CDN pode demiar para carregar)
     this.modoSupabase = await aguardarSupabase(3000);
 
     if (this.modoSupabase) {
       console.log('✅ Conectado ao Supabase - dados sincronizados em nuvem');
-      // Se tabela vazia, semear dados iniciais no Supabase
       await this._seedSupabaseSeVazio();
     } else {
       console.log('📦 Modo offline - dados salvos no navegador');
@@ -23,6 +28,10 @@ const DB = {
         this._seedLocal();
       }
     }
+  },
+
+  async aguardarPronto() {
+    if (this._initPromise) await this._initPromise;
   },
 
   async _seedSupabaseSeVazio() {
@@ -75,6 +84,7 @@ const DB = {
 
   // ===== PACIENTES =====
   async obterPacientes() {
+    await this.aguardarPronto();
     if (this.modoSupabase) {
       try {
         const { data, error } = await clientSupabase.from('pacientes').select('*');
@@ -182,6 +192,7 @@ const DB = {
   },
 
   async buscarPacientes(termo, filtros = {}) {
+    await this.aguardarPronto();
     let pacientes = await this.obterPacientes();
 
     if (termo) {
@@ -205,6 +216,7 @@ const DB = {
 
   // ===== RELATÓRIOS =====
   async obterRelatorios() {
+    await this.aguardarPronto();
     if (this.modoSupabase) {
       const { data, error } = await clientSupabase.from('relatorios').select('*');
       if (error) { console.error(error); return []; }
@@ -290,6 +302,7 @@ const DB = {
   },
 
   async buscarRelatorios(termo, filtros = {}) {
+    await this.aguardarPronto();
     let relatorios = await this.obterRelatorios();
     const pacientes = await this.obterPacientes();
 
