@@ -82,14 +82,34 @@
   <script src="js/auditoria.js"></script>
   <script>
     async function filtrar() {
-      const termo = document.getElementById('busca').value;
-      const filtros = {
-        status: document.getElementById('filtroStatus').value,
-        sexo: document.getElementById('filtroSexo').value,
-        quarto: document.getElementById('filtroQuarto').value,
-        medicamento_controlado: document.getElementById('filtroControlado').value
-      };
-      renderizarTabela(await DB.buscarPacientes(termo, filtros));
+      const btnBuscar = document.querySelector('.search-bar .btn-primary');
+      const tbody = document.getElementById('tabelaPacientes');
+      const vazio = document.getElementById('estadoVazio');
+      try {
+        if (btnBuscar) {
+          btnBuscar.disabled = true;
+          btnBuscar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+        }
+        const termo = document.getElementById('busca').value;
+        const filtros = {
+          status: document.getElementById('filtroStatus').value,
+          sexo: document.getElementById('filtroSexo').value,
+          quarto: document.getElementById('filtroQuarto').value,
+          medicamento_controlado: document.getElementById('filtroControlado').value
+        };
+        const pacientes = await DB.buscarPacientes(termo, filtros);
+        renderizarTabela(pacientes);
+      } catch (e) {
+        console.error('Erro ao buscar pacientes:', e);
+        tbody.innerHTML = '';
+        vazio.style.display = 'block';
+        vazio.querySelector('h3').textContent = 'Erro ao carregar pacientes';
+      } finally {
+        if (btnBuscar) {
+          btnBuscar.disabled = false;
+          btnBuscar.innerHTML = '<i class="fas fa-search"></i> Buscar';
+        }
+      }
     }
 
     function limparFiltros() {
@@ -160,6 +180,10 @@
     }
 
     function esperar() {
+      if (typeof DB === 'undefined' || typeof Auth === 'undefined') {
+        setTimeout(esperar, 100);
+        return;
+      }
       if (typeof Auth !== 'undefined' && Auth.estaAutenticado && Auth.estaAutenticado()) {
         if (!Auth.podeAcessar('pacientes')) { document.getElementById('btnNovo').style.display = 'none'; }
         document.getElementById('busca').addEventListener('keyup', e => { if (e.key === 'Enter') filtrar(); });

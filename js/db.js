@@ -15,11 +15,34 @@ const DB = {
 
     if (this.modoSupabase) {
       console.log('✅ Conectado ao Supabase - dados sincronizados em nuvem');
+      // Se tabela vazia, semear dados iniciais no Supabase
+      await this._seedSupabaseSeVazio();
     } else {
       console.log('📦 Modo offline - dados salvos no navegador');
       if (!localStorage.getItem(this.CHAVE_PACIENTES)) {
         this._seedLocal();
       }
+    }
+  },
+
+  async _seedSupabaseSeVazio() {
+    try {
+      const { data, error } = await clientSupabase.from('pacientes').select('id').limit(1);
+      if (error) { console.error('Erro ao verificar pacientes:', error); return; }
+      if (data && data.length > 0) return; // Já existem dados
+
+      console.log('🌱 Semando dados iniciais no Supabase...');
+      for (const p of DadosIniciais.pacientes) {
+        const { error: insertError } = await clientSupabase.from('pacientes').upsert(p, { onConflict: 'id' });
+        if (insertError) console.error('Erro ao semear paciente:', insertError);
+      }
+      for (const r of DadosIniciais.relatorios) {
+        const { error: insertError } = await clientSupabase.from('relatorios').upsert(r, { onConflict: 'id' });
+        if (insertError) console.error('Erro ao semear relatório:', insertError);
+      }
+      console.log('✅ Dados iniciais semeados no Supabase');
+    } catch (e) {
+      console.error('Erro ao semear dados iniciais:', e);
     }
   },
 
