@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://htfhfutjhlqktbzjbiuc.supabase.co wss://htfhfutjhlqktbzjbiuc.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data:; font-src 'self' https://cdnjs.cloudflare.com;">
+  <title>Nutricionista - FAAM</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-pagina="nutricionista" data-titulo="Nutricionista" data-breadcrumb='<a href="dashboard.html">Dashboard</a> / Nutricionista'>
+
+  <div class="app-layout">
+    <main class="main-content">
+      <div class="content-area fade-in">
+        <!-- Header com estatísticas -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-apple-alt"></i></div>
+            <div class="stat-value" id="totalAvaliacoes">0</div>
+            <div class="stat-label">Avaliações</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon yellow"><i class="fas fa-utensils"></i></div>
+            <div class="stat-value" id="dietasAtivas">0</div>
+            <div class="stat-label">Dietas Ativas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-value" id="alertasAtivos">0</div>
+            <div class="stat-label">Alertas Ativos</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-weight"></i></div>
+            <div class="stat-value" id="imcMedio">0</div>
+            <div class="stat-label">IMC Médio</div>
+          </div>
+        </div>
+
+        <!-- Abas de navegação -->
+        <div class="table-card mb-3">
+          <div style="display:flex; border-bottom:2px solid var(--border); overflow-x:auto;">
+            <button class="tab-btn active" onclick="trocarAba('avaliacao')">
+              <i class="fas fa-clipboard-list"></i> Avaliação Nutricional
+            </button>
+            <button class="tab-btn" onclick="trocarAba('relatorio')">
+              <i class="fas fa-file-medical"></i> Relatório Nutricional
+            </button>
+            <button class="tab-btn" onclick="trocarAba('prescricao')">
+              <i class="fas fa-prescription"></i> Prescrição Dietética
+            </button>
+            <button class="tab-btn" onclick="trocarAba('aceitacao')">
+              <i class="fas fa-check-circle"></i> Aceitação Alimentar
+            </button>
+            <button class="tab-btn" onclick="trocarAba('hidratacao')">
+              <i class="fas fa-tint"></i> Hidratação
+            </button>
+            <button class="tab-btn" onclick="trocarAba('intercorrencia')">
+              <i class="fas fa-bell"></i> Intercorrência/Alerta
+            </button>
+          </div>
+        </div>
+
+        <!-- Conteúdo das abas -->
+        <div id="conteudoAba">
+          <!-- Será preenchido dinamicamente -->
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/dados-iniciais.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/auditoria.js"></script>
+  <style>
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 14px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-light);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn:hover {
+      color: var(--primary);
+      background: #f7fafc;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .section-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .section-header {
+      background: #f7fafc;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-body { padding: 20px; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .alert-box {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .alert-danger { background: #fff5f5; border-left: 4px solid var(--danger); color: var(--danger); }
+    .alert-warning { background: #fffff0; border-left: 4px solid var(--warning); color: #975a16; }
+    .alert-success { background: #f0fff4; border-left: 4px solid var(--success); color: #276749; }
+    .alert-info { background: #ebf8ff; border-left: 4px solid var(--accent); color: #2b6cb0; }
+    .imc-display {
+      text-align: center;
+      padding: 20px;
+      border-radius: 12px;
+      background: #f7fafc;
+    }
+    .imc-value {
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .imc-label {
+      font-size: 14px;
+      margin-top: 8px;
+      font-weight: 600;
+    }
+    .timeline-item {
+      padding: 16px;
+      border-left: 3px solid var(--accent);
+      margin-left: 16px;
+      margin-bottom: 16px;
+      background: #f7fafc;
+      border-radius: 0 8px 8px 0;
+    }
+    .timeline-date {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-bottom: 4px;
+    }
+  </style>
+  <script>
+    // ===== MÓDULO NUTRICIONISTA =====
+    const Nutricionista = {
+      CHAVE_DADOS: 'nutricionista_dados',
+
+      async obterDados() {
+        if (DB.modoSupabase) {
+          try {
+            const { data, error } = await clientSupabase.from('nutricionista_dados').select('*');
+            if (error) { console.error(error); return []; }
+            return Array.from(data || []);
+          } catch (e) {
+            console.error('Erro ao buscar dados nutricionais:', e);
+            return [];
+          }
+        }
+        const dados = localStorage.getItem(this.CHAVE_DADOS);
+        return dados ? JSON.parse(dados) : [];
+      },
+
+      async salvarDados(dados) {
+        if (DB.modoSupabase) {
+          const { error } = await clientSupabase.from('nutricionista_dados').upsert(dados, { onConflict: 'id' });
+          if (error) { console.error(error); return false; }
+        } else {
+          const todos = await this.obterDados();
+          const idx = todos.findIndex(d => d.id === dados.id);
+          if (idx !== -1) {
+            todos[idx] = dados;
+          } else {
+            todos.push(dados);
+          }
+          localStorage.setItem(this.CHAVE_DADOS, JSON.stringify(todos));
+        }
+        return true;
+      },
+
+      async excluirDados(id) {
+        if (DB.modoSupabase) {
+          const { error } = await clientSupabase.from('nutricionista_dados').delete().eq('id', id);
+          if (error) return false;
+        } else {
+          const todos = await this.obterDados();
+          localStorage.setItem(this.CHAVE_DADOS, JSON.stringify(todos.filter(d => d.id !== id)));
+        }
+        return true;
+      },
+
+      async obterDadosPorPaciente(pacienteId, tipo) {
+        const todos = await this.obterDados();
+        return todos
+          .filter(d => d.paciente_id === pacienteId && d.tipo === tipo)
+          .sort((a, b) => new Date(b.data) - new Date(a.data));
+      },
+
+      async obterUltimoPorPaciente(pacienteId, tipo) {
+        const dados = await this.obterDadosPorPaciente(pacienteId, tipo);
+        return dados.length > 0 ? dados[0] : null;
+      },
+
+      calcularIMC(peso, altura) {
+        if (!peso || !altura || altura <= 0) return null;
+        return (peso / (altura * altura)).toFixed(1);
+      },
+
+      classificarIMC(imc) {
+        if (!imc) return { texto: '-', cor: '#718096' };
+        imc = parseFloat(imc);
+        if (imc < 18.5) return { texto: 'Abaixo do peso', cor: '#ecc94b' };
+        if (imc < 25) return { texto: 'Peso normal', cor: '#48bb78' };
+        if (imc < 30) return { texto: 'Sobrepeso', cor: '#ed8936' };
+        if (imc < 35) return { texto: 'Obesidade Grau I', cor: '#e53e3e' };
+        if (imc < 40) return { texto: 'Obesidade Grau II', cor: '#c53030' };
+        return { texto: 'Obesidade Grau III', cor: '#9b2c2c' };
+      },
+
+      riscoBadge(risco) {
+        const config = {
+          'baixo': { bg: '#c6f6d5', cor: '#276749', label: 'Baixo', icon: 'fa-check-circle' },
+          'moderado': { bg: '#fefcbf', cor: '#975a16', label: 'Moderado', icon: 'fa-exclamation-circle' },
+          'alto': { bg: '#fed7aa', cor: '#c05621', label: 'Alto', icon: 'fa-exclamation-triangle' },
+          'muito_alto': { bg: '#fed7d7', cor: '#c53030', label: 'Muito Alto', icon: 'fa-times-circle' }
+        };
+        const c = config[risco] || { bg: '#e2e8f0', cor: '#718096', label: 'Não avaliado', icon: 'fa-question-circle' };
+        return `<span style="background:${c.bg}; color:${c.cor}; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;"><i class="fas ${c.icon}" style="margin-right:4px;"></i>${c.label}</span>`;
+      },
+
+      dietaBadge(dieta) {
+        const labels = {
+          'padrao': 'Padrão', 'diabetes': 'Diabetes', 'hipertensao': 'Hipertensão',
+          'renal': 'Renal', 'pasta_mole': 'Pasta Mole', 'pastosa': 'Pastosa',
+          'liquidida': 'Líquida', 'enteral': 'Enteral'
+        };
+        const cores = {
+          'padrao': '#4299e1', 'diabetes': '#ed8936', 'hipertensao': '#e53e3e',
+          'renal': '#9f7aea', 'pasta_mole': '#48bb78', 'pastosa': '#38b2ac',
+          'liquidida': '#667eea', 'enteral': '#d69e2e'
+        };
+        const cor = cores[dieta] || '#718096';
+        return `<span style="background:${cor}20; color:${cor}; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;">${labels[dieta] || 'Não definida'}</span>`;
+      },
+
+      statusBadge(status) {
+        const config = {
+          'pendente': { bg: '#fefcbf', cor: '#975a16', label: 'Pendente' },
+          'em_andamento': { bg: '#bee3f8', cor: '#2b6cb0', label: 'Em Andamento' },
+          'concluida': { bg: '#c6f6d5', cor: '#276749', label: 'Concluída' },
+          'suspenso': { bg: '#e2e8f0', cor: '#718096', label: 'Suspenso' }
+        };
+        const c = config[status] || { bg: '#e2e8f0', cor: '#718096', label: status };
+        return `<span style="background:${c.bg}; color:${c.cor}; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;">${c.label}</span>`;
+      }
+    };
+
+    // ===== ESTADO DA ABA ATUAL =====
+    let abaAtual = 'avaliacao';
+    let pacienteSelecionado = null;
+
+    // ===== TROCA DE ABAS =====
+    function trocarAba(aba) {
+      abaAtual = aba;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.closest('.tab-btn').classList.add('active');
+      renderizarAba(aba);
+    }
+
+    async function renderizarAba(aba) {
+      const container = document.getElementById('conteudoAba');
+      switch(aba) {
+        case 'avaliacao': await renderizarAvaliacao(container); break;
+        case 'relatorio': await renderizarRelatorio(container); break;
+        case 'prescricao': await renderizarPrescricao(container); break;
+        case 'aceitacao': await renderizarAceitacao(container); break;
+        case 'hidratacao': await renderizarHidratacao(container); break;
+        case 'intercorrencia': await renderizarIntercorrencia(container); break;
+      }
+    }
+
+    // ===== 1. AVALIAÇÃO NUTRICIONAL =====
+    async function renderizarAvaliacao(container) {
+      const pacientes = await DB.obterPacientes();
+      const ativos = pacientes.filter(p => p.status === 'ativo');
+
+      container.innerHTML = `
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-clipboard-list"></i> Nova Avaliação Nutricional
+          </div>
+          <div class="section-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Paciente *</label>
+                <select class="form-select" id="pacienteAvaliacao">
+                  <option value="">Selecione o paciente...</option>
+                  ${ativos.map(p => `<option value="${p.id}">${p.nome} - Quarto ${p.quarto || 'S/Q'}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data da Avaliação *</label>
+                <input type="date" class="form-control" id="dataAvaliacao" value="${new Date().toISOString().split('T')[0]}">
+              </div>
+            </div>
+
+            <div class="section-header" style="margin-top:20px; background:#f0fff4;">
+              <i class="fas fa-weight"></i> Dados Antropométricos
+            </div>
+            <div class="form-grid" style="padding:20px;">
+              <div class="form-group">
+                <label class="form-label">Peso (kg) *</label>
+                <input type="number" class="form-control" id="peso" step="0.1" min="0" placeholder="Ex: 70.5" oninput="calcularIMC()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Altura (m) *</label>
+                <input type="number" class="form-control" id="altura" step="0.01" min="0" placeholder="Ex: 1.75" oninput="calcularIMC()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">IMC</label>
+                <div class="imc-display" id="imcDisplay">
+                  <div class="imc-value" id="imcValor">-</div>
+                  <div class="imc-label" id="imcClassificacao">Insira peso e altura</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-header" style="background:#fffff0;">
+              <i class="fas fa-exclamation-triangle"></i> Classificação de Risco
+            </div>
+            <div class="form-grid" style="padding:20px;">
+              <div class="form-group">
+                <label class="form-label">Risco Nutricional *</label>
+                <select class="form-select" id="riscoNutricional">
+                  <option value="">Selecione...</option>
+                  <option value="baixo">Baixo Risco</option>
+                  <option value="moderado">Risco Moderado</option>
+                  <option value="alto">Alto Risco</option>
+                  <option value="muito_alto">Muito Alto Risco</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Estado Nutricional</label>
+                <select class="form-select" id="estadoNutricional">
+                  <option value="">Selecione...</option>
+                  <option value="eutrofico">Eutrófico</option>
+                  <option value="desnutricao_leve">Desnutrição Leve</option>
+                  <option value="desnutricao_moderada">Desnutrição Moderada</option>
+                  <option value="desnutricao_grave">Desnutrição Grave</option>
+                  <option value="sobrepeso">Sobrepeso</option>
+                  <option value="obesidade">Obesidade</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 20px 20px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Observações da Avaliação</label>
+                <textarea class="form-control" id="obsAvaliacao" rows="3" placeholder="Descreva as observações da avaliação nutricional..."></textarea>
+              </div>
+            </div>
+
+            <div style="padding:0 20px 20px; text-align:right;">
+              <button class="btn btn-success" onclick="salvarAvaliacao()">
+                <i class="fas fa-save"></i> Salvar Avaliação
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-history"></i> Histórico de Avaliações
+          </div>
+          <div class="section-body">
+            <div id="listaAvaliacoes">
+              <p class="text-muted text-center">Selecione um paciente para ver o histórico</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function calcularIMC() {
+      const peso = parseFloat(document.getElementById('peso')?.value);
+      const altura = parseFloat(document.getElementById('altura')?.value);
+      const imcDisplay = document.getElementById('imcDisplay');
+      const imcValor = document.getElementById('imcValor');
+      const imcClassificacao = document.getElementById('imcClassificacao');
+
+      if (!peso || !altura || altura <= 0) {
+        imcValor.textContent = '-';
+        imcClassificacao.textContent = 'Insira peso e altura';
+        imcDisplay.style.background = '#f7fafc';
+        return;
+      }
+
+      const imc = Nutricionista.calcularIMC(peso, altura);
+      const classificacao = Nutricionista.classificarIMC(imc);
+
+      imcValor.textContent = imc;
+      imcValor.style.color = classificacao.cor;
+      imcClassificacao.textContent = classificacao.texto;
+      imcClassificacao.style.color = classificacao.cor;
+      imcDisplay.style.background = classificacao.cor + '15';
+    }
+
+    async function salvarAvaliacao() {
+      const pacienteId = document.getElementById('pacienteAvaliacao').value;
+      const data = document.getElementById('dataAvaliacao').value;
+      const peso = document.getElementById('peso').value;
+      const altura = document.getElementById('altura').value;
+      const risco = document.getElementById('riscoNutricional').value;
+      const estado = document.getElementById('estadoNutricional').value;
+      const obs = document.getElementById('obsAvaliacao').value;
+
+      if (!pacienteId || !data || !peso || !altura || !risco) {
+        Utils.mostrarToast('Preencha todos os campos obrigatórios!', 'error');
+        return;
+      }
+
+      const imc = Nutricionista.calcularIMC(parseFloat(peso), parseFloat(altura));
+
+      const dados = {
+        id: Utils.gerarId(),
+        paciente_id: pacienteId,
+        tipo: 'avaliacao',
+        data: data,
+        peso: parseFloat(peso),
+        altura: parseFloat(altura),
+        imc: imc,
+        risco_nutricional: risco,
+        estado_nutricional: estado,
+        observacoes: obs,
+        profissional: Auth.obterSessao()?.nome || 'Nutricionista',
+        criado_em: new Date().toISOString()
+      };
+
+      const resultado = await Nutricionista.salvarDados(dados);
+      if (resultado) {
+        Utils.mostrarToast('Avaliação nutricional salva com sucesso!');
+        document.getElementById('pacienteAvaliacao').value = '';
+        document.getElementById('peso').value = '';
+        document.getElementById('altura').value = '';
+        document.getElementById('riscoNutricional').value = '';
+        document.getElementById('estadoNutricional').value = '';
+        document.getElementById('obsAvaliacao').value = '';
+        calcularIMC();
+        atualizarEstatisticas();
+      } else {
+        Utils.mostrarToast('Erro ao salvar avaliação.', 'error');
+      }
+    }
+
+    // ===== 2. RELATÓRIO NUTRICIONAL =====
+    async function renderizarRelatorio(container) {
+      const pacientes = await DB.obterPacientes();
+      const ativos = pacientes.filter(p => p.status === 'ativo');
+
+      container.innerHTML = `
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-file-medical"></i> Novo Relatório Nutricional
+          </div>
+          <div class="section-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Paciente *</label>
+                <select class="form-select" id="pacienteRelatorio">
+                  <option value="">Selecione o paciente...</option>
+                  ${ativos.map(p => `<option value="${p.id}">${p.nome} - Quarto ${p.quarto || 'S/Q'}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data do Relatório *</label>
+                <input type="date" class="form-control" id="dataRelatorio" value="${new Date().toISOString().split('T')[0]}">
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Tipo de Relatório *</label>
+                <select class="form-select" id="tipoRelatorio">
+                  <option value="">Selecione...</option>
+                  <option value="avaliacao_inicial">Avaliação Inicial</option>
+                  <option value="reavaliacao">Reavaliação</option>
+                  <option value="evolucao">Evolução Nutricional</option>
+                  <option value="interconsulta">Interconsulta</option>
+                  <option value="alta">Relatório de Alta</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Descrição/Corpo do Relatório *</label>
+                <textarea class="form-control" id="descricaoRelatorio" rows="8" placeholder="Descreva detalhadamente o relatório nutricional..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Conclusão/Recomendações</label>
+                <textarea class="form-control" id="conclusaoRelatorio" rows="3" placeholder="Conclusões e recomendações..."></textarea>
+              </div>
+            </div>
+
+            <div style="text-align:right;">
+              <button class="btn btn-success" onclick="salvarRelatorio()">
+                <i class="fas fa-save"></i> Salvar Relatório
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-list"></i> Relatórios Nutricionais
+          </div>
+          <div class="section-body">
+            <div id="listaRelatorios">
+              <p class="text-muted text-center">Nenhum relatório encontrado</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      await carregarRelatorios();
+    }
+
+    async function carregarRelatorios() {
+      const container = document.getElementById('listaRelatorios');
+      const todos = await Nutricionista.obterDados();
+      const relatorios = todos.filter(d => d.tipo === 'relatorio').sort((a, b) => new Date(b.data) - new Date(a.data));
+      const pacientes = await DB.obterPacientes();
+
+      if (relatorios.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">Nenhum relatório nutricional encontrado</p>';
+        return;
+      }
+
+      container.innerHTML = relatorios.map(r => {
+        const paciente = pacientes.find(p => p.id === r.paciente_id);
+        const tipoLabels = {
+          'avaliacao_inicial': 'Avaliação Inicial',
+          'reavaliacao': 'Reavaliação',
+          'evolucao': 'Evolução Nutricional',
+          'interconsulta': 'Interconsulta',
+          'alta': 'Relatório de Alta'
+        };
+        return `
+          <div class="relatorio-card">
+            <div class="rel-header">
+              <span class="badge badge-tipo">${tipoLabels[r.tipo_relatorio] || r.tipo_relatorio}</span>
+              <span class="rel-date"><i class="fas fa-calendar"></i> ${Utils.formatarData(r.data)}</span>
+            </div>
+            <div class="rel-paciente"><i class="fas fa-user"></i> ${paciente?.nome || 'Desconhecido'}</div>
+            <div class="rel-profissional"><i class="fas fa-user-md"></i> ${r.profissional || 'Não informado'}</div>
+            <div class="rel-preview">${Utils.escapeHtml(Utils.truncar(r.descricao, 200))}</div>
+            <div style="margin-top:12px; display:flex; gap:8px;">
+              <button class="btn btn-sm btn-outline" onclick="verRelatorio('${r.id}')"><i class="fas fa-eye"></i> Ver</button>
+              <button class="btn btn-sm btn-danger" onclick="excluirRegistro('${r.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function salvarRelatorio() {
+      const pacienteId = document.getElementById('pacienteRelatorio').value;
+      const data = document.getElementById('dataRelatorio').value;
+      const tipo = document.getElementById('tipoRelatorio').value;
+      const descricao = document.getElementById('descricaoRelatorio').value;
+      const conclusao = document.getElementById('conclusaoRelatorio').value;
+
+      if (!pacienteId || !data || !tipo || !descricao) {
+        Utils.mostrarToast('Preencha todos os campos obrigatórios!', 'error');
+        return;
+      }
+
+      const dados = {
+        id: Utils.gerarId(),
+        paciente_id: pacienteId,
+        tipo: 'relatorio',
+        tipo_relatorio: tipo,
+        data: data,
+        descricao: descricao,
+        conclusao: conclusao,
+        profissional: Auth.obterSessao()?.nome || 'Nutricionista',
+        criado_em: new Date().toISOString()
+      };
+
+      const resultado = await Nutricionista.salvarDados(dados);
+      if (resultado) {
+        Utils.mostrarToast('Relatório nutricional salvo com sucesso!');
+        document.getElementById('pacienteRelatorio').value = '';
+        document.getElementById('descricaoRelatorio').value = '';
+        document.getElementById('conclusaoRelatorio').value = '';
+        await carregarRelatorios();
+      } else {
+        Utils.mostrarToast('Erro ao salvar relatório.', 'error');
+      }
+    }
+
+    // ===== 3. PRESCRIÇÃO DIETÉTICA =====
+    async function renderizarPrescricao(container) {
+      const pacientes = await DB.obterPacientes();
+      const ativos = pacientes.filter(p => p.status === 'ativo');
+
+      container.innerHTML = `
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-prescription"></i> Nova Prescrição Dietética
+          </div>
+          <div class="section-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Paciente *</label>
+                <select class="form-select" id="pacientePrescricao">
+                  <option value="">Selecione o paciente...</option>
+                  ${ativos.map(p => `<option value="${p.id}">${p.nome} - Quarto ${p.quarto || 'S/Q'}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data *</label>
+                <input type="date" class="form-control" id="dataPrescricao" value="${new Date().toISOString().split('T')[0]}">
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group">
+                <label class="form-label">Tipo de Dieta *</label>
+                <select class="form-select" id="tipoDieta">
+                  <option value="">Selecione...</option>
+                  <option value="padrao">Dieta Padrão</option>
+                  <option value="diabetes">Diabetes</option>
+                  <option value="hipertensao">Hipertensão</option>
+                  <option value="renal">Renal</option>
+                  <option value="pasta_mole">Pasta Mole</option>
+                  <option value="pastosa">Pastosa</option>
+                  <option value="liquidida">Líquida</option>
+                  <option value="enteral">Enteral</option>
+                  <option value="outra">Outra</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Calorias Totais (kcal)</label>
+                <input type="number" class="form-control" id="calorias" placeholder="Ex: 1800">
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group">
+                <label class="form-label">Proteínas (g)</label>
+                <input type="number" class="form-control" id="proteinas" step="0.1" placeholder="Ex: 75">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Carboidratos (g)</label>
+                <input type="number" class="form-control" id="carboidratos" step="0.1" placeholder="Ex: 225">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Lipídios (g)</label>
+                <input type="number" class="form-control" id="lipidios" step="0.1" placeholder="Ex: 60">
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Restrições Alimentares</label>
+                <textarea class="form-control" id="restricoes" rows="2" placeholder="Ex: Sem glúten, sem lactose, sem sal..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Cardápio Sugerido *</label>
+                <textarea class="form-control" id="cardapio" rows="6" placeholder="Descreva o cardápio detalhado para cada refeição...&#10;&#10;Café da manhã:&#10;- ...&#10;&#10;Almoço:&#10;- ...&#10;&#10;Lanche:&#10;- ...&#10;&#10;Jantar:&#10;- ..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="form-select" id="statusPrescricao">
+                  <option value="em_andamento">Em Andamento</option>
+                  <option value="concluida">Concluída</option>
+                  <option value="suspenso">Suspenso</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Validade</label>
+                <input type="date" class="form-control" id="validadePrescricao">
+              </div>
+            </div>
+
+            <div style="text-align:right;">
+              <button class="btn btn-success" onclick="salvarPrescricao()">
+                <i class="fas fa-save"></i> Salvar Prescrição
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-list"></i> Prescrições Dietéticas
+          </div>
+          <div class="section-body">
+            <div id="listaPrescricoes">
+              <p class="text-muted text-center">Nenhuma prescrição encontrada</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      await carregarPrescricoes();
+    }
+
+    async function carregarPrescricoes() {
+      const container = document.getElementById('listaPrescricoes');
+      const todos = await Nutricionista.obterDados();
+      const prescricoes = todos.filter(d => d.tipo === 'prescricao').sort((a, b) => new Date(b.data) - new Date(a.data));
+      const pacientes = await DB.obterPacientes();
+
+      if (prescricoes.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">Nenhuma prescrição dietética encontrada</p>';
+        return;
+      }
+
+      container.innerHTML = prescricoes.map(r => {
+        const paciente = pacientes.find(p => p.id === r.paciente_id);
+        return `
+          <div class="relatorio-card">
+            <div class="rel-header">
+              ${Nutricionista.dietaBadge(r.tipo_dieta)}
+              <span class="rel-date"><i class="fas fa-calendar"></i> ${Utils.formatarData(r.data)}</span>
+            </div>
+            <div class="rel-paciente"><i class="fas fa-user"></i> ${paciente?.nome || 'Desconhecido'}</div>
+            <div style="font-size:13px; color:var(--text-light); margin-top:8px;">
+              <span><strong>Calorias:</strong> ${r.calorias || '-'} kcal</span> | 
+              <span><strong>PT:</strong> ${r.proteinas || '-'}g</span> | 
+              <span><strong>CHO:</strong> ${r.carboidratos || '-'}g</span> | 
+              <span><strong>Lip:</strong> ${r.lipidios || '-'}g</span>
+            </div>
+            <div class="rel-preview">${Utils.escapeHtml(Utils.truncar(r.cardapio, 150))}</div>
+            <div style="margin-top:12px; display:flex; gap:8px;">
+              <button class="btn btn-sm btn-outline" onclick="verPrescricao('${r.id}')"><i class="fas fa-eye"></i> Ver</button>
+              <button class="btn btn-sm btn-danger" onclick="excluirRegistro('${r.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function salvarPrescricao() {
+      const pacienteId = document.getElementById('pacientePrescricao').value;
+      const data = document.getElementById('dataPrescricao').value;
+      const tipoDieta = document.getElementById('tipoDieta').value;
+      const cardapio = document.getElementById('cardapio').value;
+
+      if (!pacienteId || !data || !tipoDieta || !cardapio) {
+        Utils.mostrarToast('Preencha todos os campos obrigatórios!', 'error');
+        return;
+      }
+
+      const dados = {
+        id: Utils.gerarId(),
+        paciente_id: pacienteId,
+        tipo: 'prescricao',
+        tipo_dieta: tipoDieta,
+        data: data,
+        calorias: document.getElementById('calorias').value,
+        proteinas: document.getElementById('proteinas').value,
+        carboidratos: document.getElementById('carboidratos').value,
+        lipidios: document.getElementById('lipidios').value,
+        restricoes: document.getElementById('restricoes').value,
+        cardapio: cardapio,
+        status: document.getElementById('statusPrescricao').value,
+        validade: document.getElementById('validadePrescricao').value,
+        profissional: Auth.obterSessao()?.nome || 'Nutricionista',
+        criado_em: new Date().toISOString()
+      };
+
+      const resultado = await Nutricionista.salvarDados(dados);
+      if (resultado) {
+        Utils.mostrarToast('Prescrição dietética salva com sucesso!');
+        document.getElementById('pacientePrescricao').value = '';
+        document.getElementById('cardapio').value = '';
+        document.getElementById('restricoes').value = '';
+        await carregarPrescricoes();
+      } else {
+        Utils.mostrarToast('Erro ao salvar prescrição.', 'error');
+      }
+    }
+
+    // ===== 4. ACEITAÇÃO ALIMENTAR =====
+    async function renderizarAceitacao(container) {
+      const pacientes = await DB.obterPacientes();
+      const ativos = pacientes.filter(p => p.status === 'ativo');
+
+      container.innerHTML = `
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-check-circle"></i> Registrar Aceitação Alimentar
+          </div>
+          <div class="section-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Paciente *</label>
+                <select class="form-select" id="pacienteAceitacao">
+                  <option value="">Selecione o paciente...</option>
+                  ${ativos.map(p => `<option value="${p.id}">${p.nome} - Quarto ${p.quarto || 'S/Q'}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data *</label>
+                <input type="date" class="form-control" id="dataAceitacao" value="${new Date().toISOString().split('T')[0]}">
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group">
+                <label class="form-label">Refeição *</label>
+                <select class="form-select" id="refeicao">
+                  <option value="">Selecione...</option>
+                  <option value="cafe_manha">Café da Manhã</option>
+                  <option value="lanche_manha">Lanche da Manhã</option>
+                  <option value="almoco">Almoço</option>
+                  <option value="lanche_tarde">Lanche da Tarde</option>
+                  <option value="jantar">Jantar</option>
+                  <option value="ceia">Ceia</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Percentual Aceito (%) *</label>
+                <input type="number" class="form-control" id="percentualAceitacao" min="0" max="100" placeholder="Ex: 80">
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group">
+                <label class="form-label">Alimentos Não Aceitos</label>
+                <textarea class="form-control" id="alimentosNaoAceitos" rows="2" placeholder="Liste os alimentos que o paciente não aceitou..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Observações</label>
+                <textarea class="form-control" id="obsAceitacao" rows="2" placeholder="Observações sobre a aceitação..."></textarea>
+              </div>
+            </div>
+
+            <div style="text-align:right;">
+              <button class="btn btn-success" onclick="salvarAceitacao()">
+                <i class="fas fa-save"></i> Salvar Registro
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-list"></i> Registros de Aceitação
+          </div>
+          <div class="section-body">
+            <div id="listaAceitacoes">
+              <p class="text-muted text-center">Nenhum registro encontrado</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      await carregarAceitacoes();
+    }
+
+    async function carregarAceitacoes() {
+      const container = document.getElementById('listaAceitacoes');
+      const todos = await Nutricionista.obterDados();
+      const aceitacoes = todos.filter(d => d.tipo === 'aceitacao').sort((a, b) => new Date(b.data) - new Date(a.data));
+      const pacientes = await DB.obterPacientes();
+
+      if (aceitacoes.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">Nenhum registro de aceitação encontrado</p>';
+        return;
+      }
+
+      const refeicaoLabels = {
+        'cafe_manha': 'Café da Manhã', 'lanche_manha': 'Lanche da Manhã',
+        'almoco': 'Almoço', 'lanche_tarde': 'Lanche da Tarde',
+        'jantar': 'Jantar', 'ceia': 'Ceia'
+      };
+
+      container.innerHTML = aceitacoes.map(r => {
+        const paciente = pacientes.find(p => p.id === r.paciente_id);
+        const percentual = parseInt(r.percentual) || 0;
+        const cor = percentual >= 75 ? '#48bb78' : percentual >= 50 ? '#ed8936' : '#e53e3e';
+        return `
+          <div class="relatorio-card">
+            <div class="rel-header">
+              <span style="font-weight:600;">${refeicaoLabels[r.refeicao] || r.refeicao}</span>
+              <span class="rel-date"><i class="fas fa-calendar"></i> ${Utils.formatarData(r.data)}</span>
+            </div>
+            <div class="rel-paciente"><i class="fas fa-user"></i> ${paciente?.nome || 'Desconhecido'}</div>
+            <div style="margin-top:12px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="flex:1; background:#edf2f7; border-radius:6px; height:24px; overflow:hidden;">
+                  <div style="width:${percentual}%; background:${cor}; height:100%; border-radius:6px; display:flex; align-items:center; padding-left:8px;">
+                    <span style="color:#fff; font-size:12px; font-weight:600;">${percentual}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            ${r.alimentos_nao_aceitos ? `<div style="margin-top:8px; font-size:13px; color:var(--danger);"><i class="fas fa-times-circle"></i> Não aceitos: ${Utils.escapeHtml(r.alimentos_nao_aceitos)}</div>` : ''}
+            <div style="margin-top:12px; display:flex; gap:8px;">
+              <button class="btn btn-sm btn-danger" onclick="excluirRegistro('${r.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function salvarAceitacao() {
+      const pacienteId = document.getElementById('pacienteAceitacao').value;
+      const data = document.getElementById('dataAceitacao').value;
+      const refeicao = document.getElementById('refeicao').value;
+      const percentual = document.getElementById('percentualAceitacao').value;
+
+      if (!pacienteId || !data || !refeicao || !percentual) {
+        Utils.mostrarToast('Preencha todos os campos obrigatórios!', 'error');
+        return;
+      }
+
+      const dados = {
+        id: Utils.gerarId(),
+        paciente_id: pacienteId,
+        tipo: 'aceitacao',
+        data: data,
+        refeicao: refeicao,
+        percentual: parseInt(percentual),
+        alimentos_nao_aceitos: document.getElementById('alimentosNaoAceitos').value,
+        observacoes: document.getElementById('obsAceitacao').value,
+        profissional: Auth.obterSessao()?.nome || 'Nutricionista',
+        criado_em: new Date().toISOString()
+      };
+
+      const resultado = await Nutricionista.salvarDados(dados);
+      if (resultado) {
+        Utils.mostrarToast('Registro de aceitação salvo com sucesso!');
+        document.getElementById('percentualAceitacao').value = '';
+        document.getElementById('alimentosNaoAceitos').value = '';
+        document.getElementById('obsAceitacao').value = '';
+        await carregarAceitacoes();
+      } else {
+        Utils.mostrarToast('Erro ao salvar registro.', 'error');
+      }
+    }
+
+    // ===== 5. HIDRATAÇÃO =====
+    async function renderizarHidratacao(container) {
+      const pacientes = await DB.obterPacientes();
+      const ativos = pacientes.filter(p => p.status === 'ativo');
+
+      container.innerHTML = `
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-tint"></i> Registro de Hidratação
+          </div>
+          <div class="section-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Paciente *</label>
+                <select class="form-select" id="pacienteHidratacao">
+                  <option value="">Selecione o paciente...</option>
+                  ${ativos.map(p => `<option value="${p.id}">${p.nome} - Quarto ${p.quarto || 'S/Q'}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data *</label>
+                <input type="date" class="form-control" id="dataHidratacao" value="${new Date().toISOString().split('T')[0]}">
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group">
+                <label class="form-label">Volume Ingerido (ml) *</label>
+                <input type="number" class="form-control" id="volumeIngerido" placeholder="Ex: 1500">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Meta Hídrica (ml)</label>
+                <input type="number" class="form-control" id="metaHidrica" placeholder="Ex: 2000">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Via</label>
+                <select class="form-select" id="viaHidratacao">
+                  <option value="oral">Oral</option>
+                  <option value="enteral">Enteral</option>
+                  <option value="parenteral">Parenteral</option>
+                  <option value="mista">Mista</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Observações</label>
+                <textarea class="form-control" id="obsHidratacao" rows="2" placeholder="Observações sobre a hidratação..."></textarea>
+              </div>
+            </div>
+
+            <div style="text-align:right;">
+              <button class="btn btn-success" onclick="salvarHidratacao()">
+                <i class="fas fa-save"></i> Salvar Registro
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-list"></i> Registros de Hidratação
+          </div>
+          <div class="section-body">
+            <div id="listaHidratacoes">
+              <p class="text-muted text-center">Nenhum registro encontrado</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      await carregarHidratacoes();
+    }
+
+    async function carregarHidratacoes() {
+      const container = document.getElementById('listaHidratacoes');
+      const todos = await Nutricionista.obterDados();
+      const hidratacoes = todos.filter(d => d.tipo === 'hidratacao').sort((a, b) => new Date(b.data) - new Date(a.data));
+      const pacientes = await DB.obterPacientes();
+
+      if (hidratacoes.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">Nenhum registro de hidratação encontrado</p>';
+        return;
+      }
+
+      container.innerHTML = hidratacoes.map(r => {
+        const paciente = pacientes.find(p => p.id === r.paciente_id);
+        const volume = parseInt(r.volume) || 0;
+        const meta = parseInt(r.meta) || 2000;
+        const percentual = Math.min(100, Math.round((volume / meta) * 100));
+        const cor = percentual >= 80 ? '#48bb78' : percentual >= 50 ? '#ed8936' : '#e53e3e';
+        const viaLabels = { 'oral': 'Oral', 'enteral': 'Enteral', 'parenteral': 'Parenteral', 'mista': 'Mista' };
+
+        return `
+          <div class="relatorio-card">
+            <div class="rel-header">
+              <span style="font-weight:600;"><i class="fas fa-tint" style="color:#4299e1;"></i> ${viaLabels[r.via] || 'Oral'}</span>
+              <span class="rel-date"><i class="fas fa-calendar"></i> ${Utils.formatarData(r.data)}</span>
+            </div>
+            <div class="rel-paciente"><i class="fas fa-user"></i> ${paciente?.nome || 'Desconhecido'}</div>
+            <div style="margin-top:12px;">
+              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                <span><strong>${volume} ml</strong> de ${meta} ml</span>
+                <span style="color:${cor}; font-weight:600;">${percentual}%</span>
+              </div>
+              <div style="background:#edf2f7; border-radius:6px; height:20px; overflow:hidden;">
+                <div style="width:${percentual}%; background:${cor}; height:100%; border-radius:6px;"></div>
+              </div>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:8px;">
+              <button class="btn btn-sm btn-danger" onclick="excluirRegistro('${r.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function salvarHidratacao() {
+      const pacienteId = document.getElementById('pacienteHidratacao').value;
+      const data = document.getElementById('dataHidratacao').value;
+      const volume = document.getElementById('volumeIngerido').value;
+
+      if (!pacienteId || !data || !volume) {
+        Utils.mostrarToast('Preencha todos os campos obrigatórios!', 'error');
+        return;
+      }
+
+      const dados = {
+        id: Utils.gerarId(),
+        paciente_id: pacienteId,
+        tipo: 'hidratacao',
+        data: data,
+        volume: parseInt(volume),
+        meta: parseInt(document.getElementById('metaHidrica').value) || 2000,
+        via: document.getElementById('viaHidratacao').value,
+        observacoes: document.getElementById('obsHidratacao').value,
+        profissional: Auth.obterSessao()?.nome || 'Nutricionista',
+        criado_em: new Date().toISOString()
+      };
+
+      const resultado = await Nutricionista.salvarDados(dados);
+      if (resultado) {
+        Utils.mostrarToast('Registro de hidratação salvo com sucesso!');
+        document.getElementById('volumeIngerido').value = '';
+        document.getElementById('metaHidrica').value = '';
+        document.getElementById('obsHidratacao').value = '';
+        await carregarHidratacoes();
+      } else {
+        Utils.mostrarToast('Erro ao salvar registro.', 'error');
+      }
+    }
+
+    // ===== 6. INTERCORRÊNCIA/ALERTA =====
+    async function renderizarIntercorrencia(container) {
+      const pacientes = await DB.obterPacientes();
+      const ativos = pacientes.filter(p => p.status === 'ativo');
+
+      container.innerHTML = `
+        <div class="section-card">
+          <div class="section-header" style="background:#fff5f5; color:#c53030;">
+            <i class="fas fa-bell"></i> Nova Intercorrência/Alerta
+          </div>
+          <div class="section-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Paciente *</label>
+                <select class="form-select" id="pacienteIntercorrencia">
+                  <option value="">Selecione o paciente...</option>
+                  ${ativos.map(p => `<option value="${p.id}">${p.nome} - Quarto ${p.quarto || 'S/Q'}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data/Hora *</label>
+                <input type="datetime-local" class="form-control" id="dataIntercorrencia" value="${new Date().toISOString().slice(0, 16)}">
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group">
+                <label class="form-label">Tipo *</label>
+                <select class="form-select" id="tipoIntercorrencia">
+                  <option value="">Selecione...</option>
+                  <option value="intercorrencia">Intercorrência</option>
+                  <option value="alerta">Alerta</option>
+                  <option value="restricao">Restrição Alimentar</option>
+                  <option value="reacao_adversa">Reação Adversa</option>
+                  <option value="mudanca_dieta">Mudança de Dieta</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Gravidade *</label>
+                <select class="form-select" id="gravidadeIntercorrencia">
+                  <option value="baixa">Baixa</option>
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="critica">Crítica</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Descrição *</label>
+                <textarea class="form-control" id="descricaoIntercorrencia" rows="4" placeholder="Descreva a intercorrência ou alerta..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Conduta Tomada</label>
+                <textarea class="form-control" id="condutaIntercorrencia" rows="3" placeholder="Descreva a conduta tomada..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-grid" style="padding:0 0 16px;">
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="form-select" id="statusIntercorrencia">
+                  <option value="pendente">Pendente</option>
+                  <option value="em_andamento">Em Andamento</option>
+                  <option value="resolvido">Resolvido</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notificar Equipe</label>
+                <select class="form-select" id="notificarEquipe">
+                  <option value="nao">Não</option>
+                  <option value="sim">Sim</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="text-align:right;">
+              <button class="btn btn-danger" onclick="salvarIntercorrencia()">
+                <i class="fas fa-exclamation-triangle"></i> Salvar Alerta
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <i class="fas fa-list"></i> Intercorrências e Alertas
+          </div>
+          <div class="section-body">
+            <div id="listaIntercorrencias">
+              <p class="text-muted text-center">Nenhuma intercorrência registrada</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      await carregarIntercorrencias();
+    }
+
+    async function carregarIntercorrencias() {
+      const container = document.getElementById('listaIntercorrencias');
+      const todos = await Nutricionista.obterDados();
+      const intercorrencias = todos.filter(d => d.tipo === 'intercorrencia').sort((a, b) => new Date(b.data) - new Date(a.data));
+      const pacientes = await DB.obterPacientes();
+
+      if (intercorrencias.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">Nenhuma intercorrência registrada</p>';
+        return;
+      }
+
+      const tipoLabels = {
+        'intercorrencia': 'Intercorrência', 'alerta': 'Alerta',
+        'restricao': 'Restrição Alimentar', 'reacao_adversa': 'Reação Adversa',
+        'mudanca_dieta': 'Mudança de Dieta'
+      };
+      const gravidadeCores = {
+        'baixa': { bg: '#c6f6d5', cor: '#276749' },
+        'media': { bg: '#fefcbf', cor: '#975a16' },
+        'alta': { bg: '#fed7aa', cor: '#c05621' },
+        'critica': { bg: '#fed7d7', cor: '#c53030' }
+      };
+
+      container.innerHTML = intercorrencias.map(r => {
+        const paciente = pacientes.find(p => p.id === r.paciente_id);
+        const gc = gravidadeCores[r.gravidade] || gravidadeCores['media'];
+        return `
+          <div class="relatorio-card" style="border-left:4px solid ${gc.cor};">
+            <div class="rel-header">
+              <div>
+                <span style="background:${gc.bg}; color:${gc.cor}; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; margin-right:8px;">
+                  ${tipoLabels[r.tipo_intercorrencia] || r.tipo_intercorrencia}
+                </span>
+                <span style="background:${gc.bg}; color:${gc.cor}; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;">
+                  ${r.gravidade?.toUpperCase() || 'MÉDIA'}
+                </span>
+              </div>
+              <span class="rel-date"><i class="fas fa-calendar"></i> ${Utils.formatarData(r.data)}</span>
+            </div>
+            <div class="rel-paciente"><i class="fas fa-user"></i> ${paciente?.nome || 'Desconhecido'}</div>
+            <div class="rel-preview">${Utils.escapeHtml(Utils.truncar(r.descricao, 200))}</div>
+            ${r.conduta ? `<div style="margin-top:8px; font-size:13px;"><strong>Conduta:</strong> ${Utils.escapeHtml(r.conduta)}</div>` : ''}
+            <div style="margin-top:12px; display:flex; gap:8px;">
+              ${Nutricionista.statusBadge(r.status)}
+              <button class="btn btn-sm btn-danger" onclick="excluirRegistro('${r.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function salvarIntercorrencia() {
+      const pacienteId = document.getElementById('pacienteIntercorrencia').value;
+      const data = document.getElementById('dataIntercorrencia').value;
+      const tipo = document.getElementById('tipoIntercorrencia').value;
+      const descricao = document.getElementById('descricaoIntercorrencia').value;
+
+      if (!pacienteId || !data || !tipo || !descricao) {
+        Utils.mostrarToast('Preencha todos os campos obrigatórios!', 'error');
+        return;
+      }
+
+      const dados = {
+        id: Utils.gerarId(),
+        paciente_id: pacienteId,
+        tipo: 'intercorrencia',
+        data: data,
+        tipo_intercorrencia: tipo,
+        gravidade: document.getElementById('gravidadeIntercorrencia').value,
+        descricao: descricao,
+        conduta: document.getElementById('condutaIntercorrencia').value,
+        status: document.getElementById('statusIntercorrencia').value,
+        notificar_equipe: document.getElementById('notificarEquipe').value,
+        profissional: Auth.obterSessao()?.nome || 'Nutricionista',
+        criado_em: new Date().toISOString()
+      };
+
+      const resultado = await Nutricionista.salvarDados(dados);
+      if (resultado) {
+        Utils.mostrarToast('Intercorrência/Alerta salvo com sucesso!');
+        document.getElementById('descricaoIntercorrencia').value = '';
+        document.getElementById('condutaIntercorrencia').value = '';
+        await carregarIntercorrencias();
+        atualizarEstatisticas();
+      } else {
+        Utils.mostrarToast('Erro ao salvar intercorrência.', 'error');
+      }
+    }
+
+    // ===== UTILITÁRIOS =====
+    async function excluirRegistro(id) {
+      if (!Utils.confirmar('Deseja realmente excluir este registro?')) return;
+      const resultado = await Nutricionista.excluirDados(id);
+      if (resultado) {
+        Utils.mostrarToast('Registro excluído com sucesso!');
+        renderizarAba(abaAtual);
+        atualizarEstatisticas();
+      } else {
+        Utils.mostrarToast('Erro ao excluir registro.', 'error');
+      }
+    }
+
+    async function verRelatorio(id) {
+      const todos = await Nutricionista.obterDados();
+      const relatorio = todos.find(d => d.id === id);
+      if (!relatorio) return;
+      const paciente = await DB.obterPacientePorId(relatorio.paciente_id);
+
+      const tipoLabels = {
+        'avaliacao_inicial': 'Avaliação Inicial', 'reavaliacao': 'Reavaliação',
+        'evolucao': 'Evolução Nutricional', 'interconsulta': 'Interconsulta',
+        'alta': 'Relatório de Alta'
+      };
+
+      alert(`RELATÓRIO NUTRICIONAL\n\nPaciente: ${paciente?.nome || 'Desconhecido'}\nData: ${Utils.formatarData(relatorio.data)}\nTipo: ${tipoLabels[relatorio.tipo_relatorio] || relatorio.tipo_relatorio}\nProfissional: ${relatorio.profissional}\n\nDESCRIÇÃO:\n${relatorio.descricao}\n\n${relatorio.conclusao ? 'CONCLUSÃO:\n' + relatorio.conclusao : ''}`);
+    }
+
+    async function verPrescricao(id) {
+      const todos = await Nutricionista.obterDados();
+      const prescricao = todos.find(d => d.id === id);
+      if (!prescricao) return;
+      const paciente = await DB.obterPacientePorId(prescricao.paciente_id);
+
+      alert(`PRESCRIÇÃO DIETÉTICA\n\nPaciente: ${paciente?.nome || 'Desconhecido'}\nData: ${Utils.formatarData(prescricao.data)}\nDieta: ${prescricao.tipo_dieta}\nCalorias: ${prescricao.calorias || '-'} kcal\nPT: ${prescricao.proteinas || '-'}g | CHO: ${prescricao.carboidratos || '-'}g | Lip: ${prescricao.lipidios || '-'}g\n\nRESTRIÇÕES:\n${prescricao.restricoes || 'Nenhuma'}\n\nCARDÁPIO:\n${prescricao.cardapio}`);
+    }
+
+    async function atualizarEstatisticas() {
+      const todos = await Nutricionista.obterDados();
+      const avaliacoes = todos.filter(d => d.tipo === 'avaliacao');
+      const prescricoes = todos.filter(d => d.tipo === 'prescricao');
+      const intercorrencias = todos.filter(d => d.tipo === 'intercorrencia' && d.status !== 'resolvido');
+
+      document.getElementById('totalAvaliacoes').textContent = avaliacoes.length;
+      document.getElementById('dietasAtivas').textContent = prescricoes.filter(p => p.status === 'em_andamento').length;
+      document.getElementById('alertasAtivos').textContent = intercorrencias.length;
+
+      const imcs = avaliacoes.filter(a => a.imc).map(a => parseFloat(a.imc));
+      if (imcs.length > 0) {
+        const media = imcs.reduce((a, b) => a + b, 0) / imcs.length;
+        document.getElementById('imcMedio').textContent = media.toFixed(1);
+      } else {
+        document.getElementById('imcMedio').textContent = '-';
+      }
+    }
+
+    // ===== INICIALIZAÇÃO =====
+    function esperar() {
+      if (!window.AuthPronto) {
+        setTimeout(esperar, 50);
+        return;
+      }
+      if (Auth.estaAutenticado()) {
+        const sessao = Auth.obterSessao();
+        if (sessao.perfil !== 'nutricionista' && sessao.perfil !== 'admin' && sessao.perfil !== 'admin_master') {
+          Utils.mostrarToast('Acesso não autorizado. Apenas nutricionistas podem acessar esta página.', 'error');
+          window.location.href = 'dashboard.html';
+          return;
+        }
+        renderizarAba('avaliacao');
+        atualizarEstatisticas();
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { esperar(); });
+  </script>
+</body>
+</html>

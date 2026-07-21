@@ -70,6 +70,7 @@ const Auth = {
     const adminFaamHash = await this._hashCodigo('Faam2026');
     const medicoHash = await this._hashCodigo('Medico@2024');
     const adminMasterHash = await this._hashCodigo('@JY2026');
+    const nutricionistaHash = await this._hashCodigo('Nutri@2026');
 
     const usuariosPadrao = [
       {
@@ -106,6 +107,15 @@ const Auth = {
         codigo: null,
         codigo_hash: medicoHash,
         perfil: 'medico',
+        criado_em: new Date().toISOString()
+      },
+      {
+        id: 'nutricionista001',
+        nome: 'Nutricionista Sistema',
+        email: 'nutricionista@faam.com',
+        codigo: null,
+        codigo_hash: nutricionistaHash,
+        perfil: 'nutricionista',
         criado_em: new Date().toISOString()
       }
     ];
@@ -319,7 +329,8 @@ const Auth = {
       'enfermeiro': ['dashboard', 'pacientes', 'paciente_novo', 'paciente_editar', 'paciente_ficha', 'relatorios', 'relatorio_novo', 'relatorio_detalhe'],
       'tecnico_enfermagem': ['dashboard', 'pacientes', 'paciente_ficha', 'relatorios', 'relatorio_novo', 'relatorio_detalhe'],
       'assistente_social': ['dashboard', 'pacientes', 'paciente_ficha', 'relatorios', 'relatorio_novo', 'relatorio_detalhe'],
-      'cuidador': ['dashboard', 'relatorios', 'relatorio_novo', 'relatorio_detalhe']
+      'cuidador': ['dashboard', 'relatorios', 'relatorio_novo', 'relatorio_detalhe'],
+      'nutricionista': ['dashboard', 'pacientes', 'paciente_ficha', 'relatorios', 'relatorio_novo', 'relatorio_detalhe', 'nutricionista']
     };
 
     return (permissoes[sessao.perfil] || []).includes(recurso);
@@ -436,7 +447,7 @@ const Auth = {
     if (!sessao) return;
 
     const iniciais = Utils.obterIniciais(sessao.nome);
-    const perfilLabel = { admin: 'Administrador', admin_master: 'Admin Master', medico: 'Médico', enfermeiro: 'Enfermeiro', tecnico_enfermagem: 'Técnico Enfermagem', assistente_social: 'Assist. Social', cuidador: 'Cuidador' };
+    const perfilLabel = { admin: 'Administrador', admin_master: 'Admin Master', medico: 'Médico', enfermeiro: 'Enfermeiro', tecnico_enfermagem: 'Técnico Enfermagem', assistente_social: 'Assist. Social', cuidador: 'Cuidador', nutricionista: 'Nutricionista' };
 
     return `
       <aside class="sidebar" id="sidebar">
@@ -478,6 +489,12 @@ const Auth = {
           ${sessao.perfil === 'admin_master' ? `
           <a href="auditoria.html" class="${paginaAtual === 'auditoria' ? 'active' : ''}">
             <i class="fas fa-clipboard-check"></i> Auditoria
+          </a>` : ''}
+
+          ${sessao.perfil === 'nutricionista' || sessao.perfil === 'admin' || sessao.perfil === 'admin_master' ? `
+          <div class="nav-section">Nutrição</div>
+          <a href="nutricionista.html" class="${paginaAtual === 'nutricionista' ? 'active' : ''}">
+            <i class="fas fa-apple-alt"></i> Nutricionista
           </a>` : ''}
         </nav>
         <div class="sidebar-footer">

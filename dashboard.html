@@ -75,7 +75,9 @@
             <h2>Bem-vindo, ${Utils.escapeHtml(sessao.nome)}!</h2>
             <p style="opacity:0.85; font-size:14px;">
               ${sessao.perfil === 'admin' ? 'Painel Administrativo - Acesso total ao sistema' :
+                sessao.perfil === 'admin_master' ? 'Painel Admin Master - Controle total do sistema' :
                 sessao.perfil === 'medico' ? 'Painel Médico - Cadastro e relatórios' :
+                sessao.perfil === 'nutricionista' ? 'Painel Nutricionista - Avaliações e prescrições dietéticas' :
                 sessao.perfil === 'cuidador' ? 'Painel do Cuidador - Relatórios' :
                 'Painel do Assistente Social - Visualização de pacientes'}
             </p>
@@ -160,6 +162,7 @@
               ${podeCadastrar ? `<a href="relatorio-novo.html" class="btn btn-success"><i class="fas fa-file-medical"></i> Novo Relatório</a>` : ''}
               <a href="pacientes.html" class="btn btn-outline"><i class="fas fa-search"></i> Buscar Paciente</a>
               <a href="relatorios.html" class="btn btn-outline"><i class="fas fa-list"></i> Ver Relatórios</a>
+              ${(sessao.perfil === 'nutricionista' || sessao.perfil === 'admin' || sessao.perfil === 'admin_master') ? `<a href="nutricionista.html" class="btn btn-success" style="background:#38a169;"><i class="fas fa-apple-alt"></i> Nutricionista</a>` : ''}
               ${adminBtn}
             </div>
           </div>
