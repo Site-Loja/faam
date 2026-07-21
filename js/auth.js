@@ -15,10 +15,40 @@ const Auth = {
     const usuarios = await this.obterUsuarios();
     if (usuarios.length === 0) {
       await this.criarUsuariosIniciais();
+    } else {
+      // Garantir que o usuário nutricionista exista
+      await this._garantirNutricionista();
     }
     // Validar sessão existente
     if (!this.validarSessao()) {
       sessionStorage.removeItem(this.CHAVE_SESSAO);
+    }
+  },
+
+  async _garantirNutricionista() {
+    const usuarios = await this.obterUsuarios();
+    const existe = usuarios.find(u => u.email === 'nutricionista@faam.com');
+    if (!existe) {
+      const nutricionistaHash = await this._hashCodigo('Nutri@2026');
+      const novoNutricionista = {
+        id: 'nutricionista001',
+        nome: 'Nutricionista Sistema',
+        email: 'nutricionista@faam.com',
+        codigo: null,
+        codigo_hash: nutricionistaHash,
+        perfil: 'nutricionista',
+        status: 'ativo',
+        criado_em: new Date().toISOString()
+      };
+
+      if (DB.modoSupabase) {
+        const { error } = await clientSupabase.from('usuarios').upsert(novoNutricionista);
+        if (error) console.error('Erro ao criar nutricionista:', error);
+      } else {
+        usuarios.push(novoNutricionista);
+        localStorage.setItem(this.CHAVE_USUARIOS, JSON.stringify(usuarios));
+      }
+      console.log('✅ Usuário nutricionista criado automaticamente');
     }
   },
 
