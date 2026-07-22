@@ -299,11 +299,20 @@
           let dadosNutri = [];
           if (DB.modoSupabase) {
             const { data, error } = await clientSupabase.from('nutricionista_dados').select('*').eq('paciente_id', id);
-            if (!error && data) dadosNutri = data;
+            if (error) {
+              console.warn('Tabela nutricionista_dados pode não existir:', error.message);
+              // Tentar ler do localStorage como fallback
+              const todos = JSON.parse(localStorage.getItem('nutricionista_dados') || '[]');
+              dadosNutri = todos.filter(d => d.paciente_id === id);
+            } else if (data) {
+              dadosNutri = data;
+            }
           } else {
             const todos = JSON.parse(localStorage.getItem('nutricionista_dados') || '[]');
             dadosNutri = todos.filter(d => d.paciente_id === id);
           }
+
+          console.log('Dados nutricionais encontrados:', dadosNutri.length, dadosNutri);
 
           // Buscar relatórios nutricionais também
           let relatoriosNutri = [];
@@ -311,13 +320,15 @@
           relatoriosNutri = todosRelatorios.filter(r => r.paciente_id === id && r.tipo === 'nutricional').sort((a, b) => new Date(b.data) - new Date(a.data));
 
           if (dadosNutri.length === 0 && relatoriosNutri.length === 0) {
-            containerNutricional.innerHTML = '<p style="color:var(--text-light); font-size:14px; padding:8px 0;">Nenhum registro nutricional encontrado para este paciente.</p>';
+            containerNutricional.innerHTML = '<p style="color:var(--text-light); font-size:14px; padding:8px 0;">Nenhum registro nutricional encontrado para este paciente.</p><p style="font-size:12px; color:var(--text-light);">Cadastre dados pelo módulo <a href="nutricionista.html" style="color:var(--accent);">Nutricionista</a>.</p>';
           } else {
             const avaliacoes = dadosNutri.filter(d => d.tipo === 'avaliacao').sort((a, b) => new Date(b.data) - new Date(a.data));
             const prescricoes = dadosNutri.filter(d => d.tipo === 'prescricao').sort((a, b) => new Date(b.data) - new Date(a.data));
             const aceitacoes = dadosNutri.filter(d => d.tipo === 'aceitacao').sort((a, b) => new Date(b.data) - new Date(a.data));
             const hidratacoes = dadosNutri.filter(d => d.tipo === 'hidratacao').sort((a, b) => new Date(b.data) - new Date(a.data));
             const intercorrencias = dadosNutri.filter(d => d.tipo === 'intercorrencia').sort((a, b) => new Date(b.data) - new Date(a.data));
+
+            console.log('Avaliações:', avaliacoes.length, 'Prescrições:', prescricoes.length, 'Aceitações:', aceitacoes.length, 'Hidratações:', hidratacoes.length, 'Intercorrências:', intercorrencias.length);
 
             let html = '';
 

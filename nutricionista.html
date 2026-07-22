@@ -154,13 +154,29 @@
     // ===== DADOS NUTRICIONAIS =====
     async function carregarDadosNutricionais() {
       if (!pacienteAtual) return;
+
+      // Carregar do Supabase
+      let dadosSupabase = [];
       if (DB.modoSupabase) {
         const { data, error } = await clientSupabase.from('nutricionista_dados').select('*').eq('paciente_id', pacienteAtual.id);
-        todosDados = error ? [] : (data || []);
-      } else {
-        const todos = JSON.parse(localStorage.getItem('nutricionista_dados') || '[]');
-        todosDados = todos.filter(d => d.paciente_id === pacienteAtual.id);
+        if (error) {
+          console.warn('Erro ao carregar do Supabase:', error.message);
+        } else if (data) {
+          dadosSupabase = data;
+        }
       }
+
+      // Carregar do localStorage
+      const dadosLocal = JSON.parse(localStorage.getItem('nutricionista_dados') || '[]').filter(d => d.paciente_id === pacienteAtual.id);
+
+      // Combinar dados (Supabase tem prioridade, mas adicionar os que só estão no localStorage)
+      const idsExistentes = new Set(dadosSupabase.map(d => d.id));
+      const unicosLocal = dadosLocal.filter(d => !idsExistentes.has(d.id));
+
+      todosDados = [...dadosSupabase, ...unicosLocal].sort((a, b) => new Date(b.data) - new Date(a.data));
+
+      console.log('Dados nutricionais carregados:', todosDados.length, '(Supabase:', dadosSupabase.length, '| Local:', dadosLocal.length, ')');
+
       renderizarResumo();
       renderizarHistorico();
       atualizarEstatisticas();
@@ -540,10 +556,23 @@
         if (!dados.data || !dados.descricao) { Utils.mostrarToast('Preencha os campos obrigatórios!', 'error'); return; }
       }
 
-      let ok;
+      let ok = false;
+      let salvouSupabase = false;
+
       if (DB.modoSupabase) {
         const { error } = await clientSupabase.from('nutricionista_dados').insert(dados);
-        ok = !error;
+        if (error) {
+          console.error('Erro Supabase:', error.message);
+          // Salvar no localStorage como fallback
+          const todos = JSON.parse(localStorage.getItem('nutricionista_dados') || '[]');
+          todos.push(dados);
+          localStorage.setItem('nutricionista_dados', JSON.stringify(todos));
+          ok = true;
+          salvouSupabase = false;
+        } else {
+          ok = true;
+          salvouSupabase = true;
+        }
       } else {
         const todos = JSON.parse(localStorage.getItem('nutricionista_dados') || '[]');
         todos.push(dados);
@@ -552,7 +581,8 @@
       }
 
       if (ok) {
-        Utils.mostrarToast('Salvo com sucesso!');
+        const msg = salvouSupabase ? 'Salvo no servidor!' : 'Salvo localmente! (Execute o SQL no Supabase para sincronizar)';
+        Utils.mostrarToast(msg);
         fecharForm();
         await carregarDadosNutricionais();
       } else {
